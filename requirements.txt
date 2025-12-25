@@ -2,4 +2,3 @@ streamlit
 google-generativeai
 spotipy
 yt-dlp
-ffmpeg-python
