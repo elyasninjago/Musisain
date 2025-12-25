@@ -1,4 +1,6 @@
 streamlit
 google-generativeai
 spotipy
-spotdl
+youtube-search-python
+yt-dlp
+requests

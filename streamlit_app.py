@@ -3,14 +3,15 @@ import google.generativeai as genai
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import random
+from youtubesearchpython import VideosSearch
+import yt_dlp
 import os
-import subprocess
 
 # ظاهر برنامه
-st.set_page_config(page_title="Spatisiify spotDL", page_icon="🎧")
-st.markdown("<style>.stApp { background: linear-gradient(-45deg, #121212, #1DB954); color: white; }</style>", unsafe_allow_html=True)
+st.set_page_config(page_title="Spatisiify Ultra", page_icon="🎧")
+st.markdown("<style>.stApp { background: linear-gradient(135deg, #1db954, #191414); color: white; }</style>", unsafe_allow_html=True)
 
-# تنظیمات هوش مصنوعی و اسپاتیفای
+# تنظیمات مدل هوشمند
 try:
     if "GEMINI_KEY" in st.secrets:
         genai.configure(api_key=st.secrets["GEMINI_KEY"])
@@ -18,61 +19,58 @@ try:
         model = genai.GenerativeModel(available_models[0])
     
     sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials("51666862f91b4a6e9e296d9582847404", "a562c839bb9a4567913c0a0989cbd46b"))
-except Exception as e:
-    st.error(f"خطا در تنظیمات: {e}")
+except:
+    st.error("خطا در بارگذاری سرویس‌ها")
 
-# تابع اصلی با استفاده از دستورات سیستم برای spotdl
-def download_with_spotdl(spotify_url):
-    try:
-        # حذف فایل‌های قبلی برای جلوگیری از تداخل
-        for f in os.listdir("."):
-            if f.endswith(".mp3"):
-                os.remove(f)
-        
-        # اجرای spotdl از طریق خط فرمان (سیستمی که spotdl با آن کار می‌کند)
-        subprocess.check_call(["spotdl", "download", spotify_url])
-        
-        # پیدا کردن نام فایلی که دانلود شده
-        for file in os.listdir("."):
-            if file.endswith(".mp3"):
-                return file
-    except Exception as e:
-        return None
+def get_best_link(query):
+    # جستجوی لینک ویدیو به سبک کتابخانه‌های جاوا اسکریپتی (سریع و مخفی)
+    videosSearch = VideosSearch(query, limit = 1)
+    result = videosSearch.result()
+    if result['result']:
+        return result['result'][0]['link']
+    return None
 
-st.title("Spatisiify 🎧")
-user_input = st.text_input("چه موزیکی می‌خوای؟ (ایموجی یا اسم)", placeholder="💃 Energy")
+st.title("Spatisiify Ultra 🎧")
+user_input = st.text_input("ایموجی یا اسم آهنگ:", placeholder="🔥 Blinding Lights")
 
-if st.button("شروع دانلود داخلی با spotDL 🚀"):
+if st.button("شکار موزیک و دانلود مستقیم 🚀"):
     if user_input:
         try:
-            with st.spinner('در حال جستجو و دانلود (این روش کمی زمان‌بر اما با کیفیت است)...'):
-                res = model.generate_content(f"Only 2 keywords for: {user_input}")
+            with st.spinner('در حال جستجوی هوشمند در دیتابیس‌های جهانی...'):
+                res = model.generate_content(f"Give me 2 keywords for: {user_input}")
                 keywords = res.text.strip()[:50]
                 results = sp.search(q=keywords, limit=1)
                 
                 if results['tracks']['items']:
                     track = results['tracks']['items'][0]
-                    s_url = track['external_urls']['spotify']
+                    track_name = track['name']
+                    artist_name = track['artists'][0]['name']
                     
                     st.image(track['album']['images'][0]['url'], width=200)
-                    st.write(f"🎵 **{track['name']}** - {track['artists'][0]['name']}")
+                    st.subheader(f"{track_name} - {artist_name}")
 
-                    # اجرای پروسه spotdl
-                    file_path = download_with_spotdl(s_url)
+                    # پیدا کردن بهترین لینک یوتیوب بدون بلاک شدن
+                    video_link = get_best_link(f"{track_name} {artist_name} audio")
                     
-                    if file_path and os.path.exists(file_path):
-                        with open(file_path, "rb") as f:
-                            st.download_button(
-                                label="📥 دانلود مستقیم فایل (MP3)",
-                                data=f,
-                                file_name=file_path,
-                                mime="audio/mpeg"
-                            )
-                        st.success("آهنگ با موفقیت توسط spotDL استخراج شد!")
-                        os.remove(file_path) # پاکسازی
+                    if video_link:
+                        # استفاده از سایت‌های تبدیل‌کننده مستقیم برای فرار از ارور 403
+                        # این متد کاربر را به یک صفحه دانلود مستقیم و تمیز می‌برد
+                        dl_link = f"https://api.vevioz.com/api/button/mp3/{video_link.split('=')[1]}"
+                        
+                        st.markdown(f"""
+                            <div style="background: #ffffff22; padding: 20px; border-radius: 15px; text-align: center; border: 1px solid #1db954;">
+                                <p>فایل با بهترین کیفیت آماده است!</p>
+                                <a href="{dl_link}" target="_blank" style="text-decoration: none;">
+                                    <button style="width: 100%; background: #1db954; color: white; padding: 15px; border: none; border-radius: 30px; font-weight: bold; cursor: pointer;">
+                                        📥 دانلود مستقیم MP3 (بدون ارور)
+                                    </button>
+                                </a>
+                                <p style="font-size: 10px; margin-top: 10px; color: #aaa;">بعد از کلیک، چند لحظه صبر کنید تا فایل آماده دانلود شود.</p>
+                            </div>
+                        """, unsafe_allow_html=True)
                     else:
-                        st.error("spotDL نتوانست آهنگ را در منابع آزاد پیدا کند.")
+                        st.error("لینک دانلودی پیدا نشد.")
                 else:
                     st.warning("آهنگی پیدا نشد.")
         except Exception as e:
-            st.error(f"خطای سیستمی: {e}")
+            st.error(f"خطا: {e}")
