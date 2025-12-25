@@ -4,8 +4,8 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import random
 
-# --- تنظیمات ظاهر ---
-st.set_page_config(page_title="Spatisiify Final Fix", page_icon="🎧")
+# --- ظاهر برنامه ---
+st.set_page_config(page_title="Spatisiify Fixed Link", page_icon="🎧")
 st.markdown("<style>.stApp { background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #1DB954); background-size: 400% 400%; animation: move 10s ease infinite; color: white; }</style>", unsafe_allow_html=True)
 
 try:
@@ -44,31 +44,30 @@ if st.button("کشف آهنگ ✨"):
                     st.subheader(f"🎵 {track['name']}")
                     st.write(f"🎤 {track['artists'][0]['name']}")
 
-                    st.markdown("### 📥 دریافت فایل (بدون باز شدن اپلیکیشن):")
+                    st.markdown("### 📥 بخش دانلود (اصلاح شده):")
                     
-                    # --- ترفند جدید برای دور زدن اپلیکیشن اسپاتیفای ---
-                    # استفاده از لینک مستقیم تبدیل‌کننده
-                    dl_link = f"https://spotifydown.com/?link={track_url}"
+                    # لینک درست شده با r آخر!
+                    final_dl_url = f"https://spotidownloader.com/download?link={track_url}"
                     
                     st.markdown(f"""
-                        <div style="background-color: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
-                            <p style="color: #FFD700;">⚠️ اگر با کلیک کردن اپلیکیشن اسپاتیفای باز شد، انگشتت را روی دکمه زیر نگه دار و <b>Open in New Tab</b> را بزن.</p>
-                            <a href="{dl_link}" target="_blank" style="text-decoration: none;">
-                                <button style="width: 100%; background-color: #1DB954; color: white; padding: 12px; border: none; border-radius: 25px; font-weight: bold; cursor: pointer;">
-                                    🚀 ورود به صفحه دانلود MP3
+                        <div style="background-color: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; border: 1px solid #1DB954;">
+                            <p style="color: #FFD700; font-size: 14px;">نکته: برای اینکه اپلیکیشن اسپاتیفای باز نشود، روی دکمه زیر نگه دارید و <b>Open in New Tab</b> را بزنید.</p>
+                            <a href="{final_dl_url}" target="_blank" style="text-decoration: none;">
+                                <button style="width: 100%; background-color: #1DB954; color: white; padding: 15px; border: none; border-radius: 30px; font-weight: bold; cursor: pointer; font-size: 16px;">
+                                    📥 ورود به صفحه دانلود MP3
                                 </button>
                             </a>
                         </div>
                     """, unsafe_allow_html=True)
                     
                     st.write("")
-                    # نمایش لینک برای کپی دستی (راه حل احتیاطی)
-                    st.text_input("لینک آهنگ برای کپی دستی (اگر دکمه بالا کار نکرد):", track_url)
+                    st.text_input("لینک مستقیم برای کپی:", track_url)
+                    st.link_button("✈️ ارسال به تلگرام", f"https://t.me/SpotifySaveBot?start={track_url}")
                     
-                    st.link_button("✈️ ارسال به تلگرام (بهترین گزینه)", f"https://t.me/SpotifySaveBot?start={track_url}")
                 else:
-                    st.warning("پیدا نشد.")
+                    st.warning("آهنگی پیدا نشد.")
         except Exception as e:
-            st.error("دوباره امتحان کن!")
+            st.error("یه بار دیگه بزن روی دکمه!")
     else:
-        st.toast("ایموجی کو؟")
+        st.toast("ایموجی یادت نره!")
+    
