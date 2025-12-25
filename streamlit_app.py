@@ -3,13 +3,14 @@ import google.generativeai as genai
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import random
-import requests
+import os
+import subprocess
 
 # ظاهر برنامه
-st.set_page_config(page_title="Spatisiify Pro", page_icon="🎧")
-st.markdown("<style>.stApp { background: linear-gradient(to right, #1e1e2f, #1db954); color: white; }</style>", unsafe_allow_html=True)
+st.set_page_config(page_title="Spatisiify spotDL", page_icon="🎧")
+st.markdown("<style>.stApp { background: linear-gradient(-45deg, #121212, #1DB954); color: white; }</style>", unsafe_allow_html=True)
 
-# تنظیمات مدل و اسپاتیفای
+# تنظیمات هوش مصنوعی و اسپاتیفای
 try:
     if "GEMINI_KEY" in st.secrets:
         genai.configure(api_key=st.secrets["GEMINI_KEY"])
@@ -17,54 +18,61 @@ try:
         model = genai.GenerativeModel(available_models[0])
     
     sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials("51666862f91b4a6e9e296d9582847404", "a562c839bb9a4567913c0a0989cbd46b"))
-except:
-    st.error("خطا در اتصال به سرویس‌ها")
+except Exception as e:
+    st.error(f"خطا در تنظیمات: {e}")
+
+# تابع اصلی با استفاده از دستورات سیستم برای spotdl
+def download_with_spotdl(spotify_url):
+    try:
+        # حذف فایل‌های قبلی برای جلوگیری از تداخل
+        for f in os.listdir("."):
+            if f.endswith(".mp3"):
+                os.remove(f)
+        
+        # اجرای spotdl از طریق خط فرمان (سیستمی که spotdl با آن کار می‌کند)
+        subprocess.check_call(["spotdl", "download", spotify_url])
+        
+        # پیدا کردن نام فایلی که دانلود شده
+        for file in os.listdir("."):
+            if file.endswith(".mp3"):
+                return file
+    except Exception as e:
+        return None
 
 st.title("Spatisiify 🎧")
-user_input = st.text_input("ایموجی‌هاتو بذار:", placeholder="🕺🔥")
+user_input = st.text_input("چه موزیکی می‌خوای؟ (ایموجی یا اسم)", placeholder="💃 Energy")
 
-if st.button("پیدا کردن و دانلود مستقیم ✨"):
+if st.button("شروع دانلود داخلی با spotDL 🚀"):
     if user_input:
         try:
-            with st.spinner('در حال آماده‌سازی فایل موزیک...'):
+            with st.spinner('در حال جستجو و دانلود (این روش کمی زمان‌بر اما با کیفیت است)...'):
                 res = model.generate_content(f"Only 2 keywords for: {user_input}")
                 keywords = res.text.strip()[:50]
-                results = sp.search(q=keywords, limit=5)
+                results = sp.search(q=keywords, limit=1)
                 
                 if results['tracks']['items']:
-                    track = random.choice(results['tracks']['items'])
+                    track = results['tracks']['items'][0]
                     s_url = track['external_urls']['spotify']
                     
                     st.image(track['album']['images'][0]['url'], width=200)
-                    st.subheader(track['name'])
-                    st.write(f"🎤 {track['artists'][0]['name']}")
+                    st.write(f"🎵 **{track['name']}** - {track['artists'][0]['name']}")
 
-                    # --- تلاش برای دانلود مستقیم از یک دیتابیس متن‌باز ---
-                    # ما اینجا به جای یوتیوب، از یک گیت‌وی (Gateway) استفاده می‌کنیم
-                    try:
-                        # این لینک یک سرور واسطه است که فایل رو میگیره و به پایتون میده
-                        gateway_url = f"https://api.spotifydownloader.org/download?link={s_url}"
-                        response = requests.get(gateway_url).json()
-                        
-                        if response['success']:
-                            music_data = requests.get(response['link']).content
-                            
-                            st.audio(music_data, format="audio/mp3")
-                            
+                    # اجرای پروسه spotdl
+                    file_path = download_with_spotdl(s_url)
+                    
+                    if file_path and os.path.exists(file_path):
+                        with open(file_path, "rb") as f:
                             st.download_button(
-                                label="📥 ذخیره مستقیم آهنگ (MP3)",
-                                data=music_data,
-                                file_name=f"{track['name']}.mp3",
+                                label="📥 دانلود مستقیم فایل (MP3)",
+                                data=f,
+                                file_name=file_path,
                                 mime="audio/mpeg"
                             )
-                        else:
-                            st.error("سرور دانلود مستقیم فعلاً در دسترس نیست.")
-                    except:
-                        # اگر سرور بالا جواب نداد، از این دکمه هوشمند استفاده کن
-                        # این دکمه کاربر رو نمیفرسته تو اسپاتیفای، میبره تو صفحه دانلود
-                        st.warning("دانلود مستقیم داخلی با خطا مواجه شد. از این لینک استفاده کن:")
-                        st.link_button("🚀 لینک دانلود سریع (بدون نیاز به تلگرام)", f"https://spotify-downloader.com/?link={s_url}")
+                        st.success("آهنگ با موفقیت توسط spotDL استخراج شد!")
+                        os.remove(file_path) # پاکسازی
+                    else:
+                        st.error("spotDL نتوانست آهنگ را در منابع آزاد پیدا کند.")
                 else:
-                    st.warning("چیزی پیدا نشد.")
-        except:
-            st.error("دوباره امتحان کن!")
+                    st.warning("آهنگی پیدا نشد.")
+        except Exception as e:
+            st.error(f"خطای سیستمی: {e}")
