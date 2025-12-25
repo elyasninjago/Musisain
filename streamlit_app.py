@@ -5,8 +5,8 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import random
 import traceback
 
-# --- تنظیمات ظاهر و انیمیشن ---
-st.set_page_config(page_title="Spatisiify Debug Mode", page_icon="🎧")
+# --- تنظیمات ظاهر ---
+st.set_page_config(page_title="Spatisiify Final", page_icon="🎧")
 
 st.markdown("""
     <style>
@@ -29,19 +29,17 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- بخش دیباگ در حافظه ---
 if 'logs' not in st.session_state:
     st.session_state.logs = []
 
 def add_log(message):
     st.session_state.logs.append(message)
 
-# --- تنظیمات API ---
+# API Keys
 GENAI_KEY = "AIzaSyCpNTVQU620tLGOdeFf9QBSk6Pg_o89ZZk"
 SPOTIPY_ID = "51666862f91b4a6e9e296d9582847404"
 SPOTIPY_SECRET = "a562c839bb9a4567913c0a0989cbd46b"
 
-# --- شروع فرآیند ---
 st.title("Spatisiify 🎧")
 
 with st.container():
@@ -51,31 +49,29 @@ with st.container():
 
 if st.button("کشف آهنگ جدید ✨"):
     if user_input:
-        add_log(f"Starting process for: {user_input}")
+        add_log(f"Process started for: {user_input}")
         try:
             # ۱. تنظیم گوگل
-            add_log("Configuring Gemini...")
             genai.configure(api_key=GENAI_KEY)
-            # استفاده از مدل با نام کامل برای جلوگیری از 404
-            model = genai.GenerativeModel('models/gemini-1.5-flash-latest')
+            
+            # تغییر کلیدی اینجاست: استفاده از نام ساده gemini-pro که در تمام نسخه‌ها هست
+            model = genai.GenerativeModel('gemini-pro') 
+            
+            add_log("Using 'gemini-pro' model...")
             
             # ۲. تحلیل حس
-            add_log("Asking Gemini for keywords...")
             prompt = f"Give me ONLY 2 english keywords for a spotify search based on these emojis: {user_input}. No extra text."
             response = model.generate_content(prompt)
             keywords = response.text.strip()
-            add_log(f"Gemini returned: {keywords}")
+            add_log(f"Gemini suggests: {keywords}")
             
             # ۳. اسپاتیفای
-            add_log("Connecting to Spotify...")
             auth = SpotifyClientCredentials(client_id=SPOTIPY_ID, client_secret=SPOTIPY_SECRET)
             sp = spotipy.Spotify(auth_manager=auth)
             
             results = sp.search(q=keywords, limit=10)
             if results['tracks']['items']:
                 track = random.choice(results['tracks']['items'])
-                add_log(f"Found track: {track['name']}")
-                
                 st.balloons()
                 st.markdown("---")
                 col1, col2 = st.columns([1, 2])
@@ -89,26 +85,15 @@ if st.button("کشف آهنگ جدید ✨"):
                 
                 st.link_button("📥 دانلود آهنگ", f"https://spotifydown.com/?link={track['external_urls']['spotify']}")
             else:
-                add_log("No tracks found on Spotify.")
                 st.warning("آهنگی پیدا نشد.")
                 
         except Exception as e:
-            error_details = traceback.format_exc()
-            add_log(f"CRITICAL ERROR: {str(e)}")
-            add_log(error_details)
-            st.error(f"خطا رخ داد. لطفا بخش Debug Log پایین صفحه را چک کنید.")
+            add_log(f"Error: {str(e)}")
+            st.error("مشکلی در هوش مصنوعی پیش آمد. لطفاً دوباره بزنید.")
     else:
-        st.toast("ایموجی کو؟")
+        st.toast("ایموجی یادت رفت!")
 
-# --- نمایش لاگ‌ها برای دیباگ ---
-st.write("---")
-with st.expander("🛠 بخش دیباگ (Debug Log)"):
-    if st.session_state.logs:
-        for log in st.session_state.logs:
-            st.code(log)
-    else:
-        st.write("هنوز عملیاتی انجام نشده.")
-
-if st.button("پاک کردن لاگ‌ها"):
-    st.session_state.logs = []
-    st.rerun()
+# نمایش لاگ‌ها
+with st.expander("🛠 Debug Log"):
+    for log in st.session_state.logs:
+        st.code(log)
