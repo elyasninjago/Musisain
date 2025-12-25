@@ -3,69 +3,86 @@ import google.generativeai as genai
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import random
-import requests
+import yt_dlp
+import os
 
-# ظاهر برنامه
-st.set_page_config(page_title="Spatisiify Professional", page_icon="🎧")
+# ظاهر شیک
+st.set_page_config(page_title="Spatisiify Pro", page_icon="🎧")
 st.markdown("<style>.stApp { background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #1DB954); background-size: 400% 400%; animation: move 10s ease infinite; color: white; }</style>", unsafe_allow_html=True)
 
-# تنظیمات هوش مصنوعی و اسپاتیفای
+# تنظیمات اتصال هوشمند
 try:
     if "GEMINI_KEY" in st.secrets:
         genai.configure(api_key=st.secrets["GEMINI_KEY"])
         available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
         model = genai.GenerativeModel(available_models[0])
     else:
-        st.error("کلید Gemini تنظیم نشده است.")
+        st.error("Secrets را چک کنید!")
         st.stop()
     
     sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials("51666862f91b4a6e9e296d9582847404", "a562c839bb9a4567913c0a0989cbd46b"))
 except Exception as e:
-    st.error(f"خطا در اتصال: {e}")
+    st.error(f"Error: {e}")
+
+# تابع اصلی دانلود که یوتیوب را دور می‌زند
+def download_music(track_name, artist_name):
+    query = f"{track_name} {artist_name} lyrics"
+    file_path = "music_file.mp3"
+    
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': 'music_file',
+        'noplaylist': True,
+        'quiet': True,
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+        # ترفند دور زدن 403: استفاده از User-Agent مرورگر معمولی
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([f"ytsearch1:{query}"])
+    
+    return f"{file_path}"
 
 st.title("Spatisiify 🎧")
-user_input = st.text_input("مودِت رو بگو:", placeholder="🔥😎")
+user_input = st.text_input("ایموجی‌هاتو بذار اینجا:", placeholder="🔥😎")
 
-if st.button("کشف و دریافت مستقیم ✨"):
+if st.button("کشف و دانلود مستقیم ✨"):
     if user_input:
         try:
-            with st.spinner('در حال پیدا کردن بهترین کیفیت...'):
-                prompt = f"Give me ONLY 2 keywords for: {user_input}"
-                response = model.generate_content(prompt)
-                keywords = response.text.strip()[:50]
+            with st.spinner('در حال جستجو و استخراج فایل (ممکن است ۱ دقیقه طول بکشد)...'):
+                res = model.generate_content(f"Give me 2 search keywords for: {user_input}")
+                keywords = res.text.strip()[:50]
                 
-                results = sp.search(q=keywords, limit=5)
-                if results['tracks']['items']:
-                    track = random.choice(results['tracks']['items'])
-                    track_name = track['name']
-                    artist_name = track['artists'][0]['name']
-                    spotify_url = track['external_urls']['spotify']
-                    
+                search_res = sp.search(q=keywords, limit=5)
+                if search_res['tracks']['items']:
+                    track = random.choice(search_res['tracks']['items'])
                     st.image(track['album']['images'][0]['url'], width=200)
-                    st.subheader(track_name)
-                    st.write(f"🎤 {artist_name}")
+                    st.subheader(track['name'])
+                    st.caption(f"Artist: {track['artists'][0]['name']}")
 
-                    # ایجاد دکمه دانلود مستقیم با استفاده از API تبدیل‌کننده
-                    # این لینک مستقیم فایل رو برای مرورگر آماده می‌کنه
-                    dl_api_url = f"https://api.spotifydownloader.org/download?link={spotify_url}"
-                    
-                    st.markdown(f"""
-                        <div style="background-color: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; border: 2px solid #1DB954; text-align: center;">
-                            <h4 style="color: white; margin-bottom: 15px;">فایل شما آماده است!</h4>
-                            <a href="https://scdl.to/download?url={spotify_url}" target="_blank" style="text-decoration: none;">
-                                <button style="width: 100%; background-color: #1DB954; color: white; padding: 15px; border: none; border-radius: 30px; font-weight: bold; cursor: pointer; font-size: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-                                    📥 شروع دانلود مستقیم (MP3)
-                                </button>
-                            </a>
-                            <p style="font-size: 12px; margin-top: 10px; color: #ccc;">بدون خروج از سایت، فایل در برگه جدید آماده دانلود می‌شود.</p>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    if track['preview_url']:
-                        st.audio(track['preview_url'])
+                    # شروع فرآیند دانلود داخلی
+                    try:
+                        music_file = download_music(track['name'], track['artists'][0]['name'])
+                        
+                        with open(music_file, "rb") as f:
+                            st.download_button(
+                                label="📥 دانلود مستقیم فایل MP3",
+                                data=f,
+                                file_name=f"{track['name']}.mp3",
+                                mime="audio/mpeg"
+                            )
+                        os.remove(music_file) # پاکسازی سرور
+                    except Exception as dl_error:
+                        st.error(f"یوتیوب اجازه دانلود مستقیم نداد. از دکمه کمکی استفاده کنید.")
+                        st.link_button("✈️ ارسال به بات تلگرام (بدون ارور)", f"https://t.me/SpotifySaveBot?start={track['external_urls']['spotify']}")
                 else:
                     st.warning("آهنگی پیدا نشد.")
         except Exception as e:
-            st.error("سرور شلوغه، یه بار دیگه امتحان کن!")
+            st.error("مشکلی پیش آمد، دوباره تلاش کنید.")
     else:
         st.toast("ایموجی؟")

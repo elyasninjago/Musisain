@@ -1,4 +1,5 @@
 streamlit
 google-generativeai
 spotipy
+yt-dlp
 requests
