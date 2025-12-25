@@ -4,105 +4,118 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import random
 
-# --- تنظیمات پیشرفته ظاهر (UI Design) ---
+# --- تنظیمات صفحه و انیمیشن پس‌زمینه ---
 st.set_page_config(page_title="Spatisiify Emoji", page_icon="🎧", layout="centered")
 
 st.markdown("""
     <style>
-    /* پس‌زمینه کل صفحه */
+    @keyframes gradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
     .stApp {
-        background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+        background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #1DB954);
+        background-size: 400% 400%;
+        animation: gradient 15s ease infinite;
         color: white;
     }
-    /* استایل کارت‌ها */
+
     .emoji-card {
-        background: rgba(255, 255, 255, 0.05);
-        padding: 20px;
-        border-radius: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        padding: 25px;
+        border-radius: 25px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
         text-align: center;
-        margin-bottom: 20px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     }
-    /* دکمه اصلی اسپاتیفای */
+
     .stButton>button {
         width: 100%;
         border-radius: 30px;
-        height: 55px;
+        height: 60px;
         background: linear-gradient(90deg, #1DB954, #1ed760);
         color: white;
         font-weight: bold;
-        font-size: 20px;
+        font-size: 22px;
         border: none;
-        box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
-        transition: 0.3s;
+        transition: 0.5s;
     }
+    
     .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(29, 185, 84, 0.5);
+        letter-spacing: 2px;
+        box-shadow: 0 0 20px #1DB954;
+    }
+
+    input {
+        background-color: rgba(255,255,255,0.1) !important;
+        color: white !important;
+        border-radius: 15px !important;
+        border: 1px solid #1DB954 !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- اعتبار سنجی ---
+# --- کلیدهای شما ---
 GENAI_KEY = "AIzaSyCpNTVQU620tLGOdeFf9QBSk6Pg_o89ZZk"
 SPOTIPY_ID = "51666862f91b4a6e9e296d9582847404"
 SPOTIPY_SECRET = "a562c839bb9a4567913c0a0989cbd46b"
 
 genai.configure(api_key=GENAI_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# اصلاح نام مدل برای رفع ارور 404
+model = genai.GenerativeModel('gemini-pro') 
 
 auth_manager = SpotifyClientCredentials(client_id=SPOTIPY_ID, client_secret=SPOTIPY_SECRET)
 sp = spotipy.Spotify(auth_manager=auth_manager)
 
-# --- بدنه اصلی برنامه ---
-st.title("Spatisiify 🎧")
-st.markdown("<p style='text-align: center; color: #b3b3b3;'>ایموجی‌هاتو بفرست، موزیکتو بگیر!</p>", unsafe_allow_html=True)
+# --- بدنه برنامه ---
+st.markdown("<h1 style='text-align: center;'>Spatisiify 🎧</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; opacity: 0.8;'>ایموجی‌هاتو بفرست، موزیکتو بگیر!</p>", unsafe_allow_html=True)
 
-# کادر دریافت ایموجی
 with st.container():
     st.markdown('<div class="emoji-card">', unsafe_allow_html=True)
-    user_emojis = st.text_input("ایموجی‌های الانت رو اینجا بذار:", placeholder="مثلا: 🔥🎸😎 یا 🌧️☕💔")
+    user_emojis = st.text_input("مودِ الانِت چیه؟", placeholder="مثلا: 🧊💎🥶")
     st.markdown('</div>', unsafe_allow_html=True)
+
+st.write("") # فاصله
 
 if st.button("کشف آهنگ جدید ✨"):
     if user_emojis:
-        with st.spinner('در حال خوندن حسِ ایموجی‌ها...'):
+        with st.spinner('در حال تحلیل حس ایموجی‌ها توسط هوش مصنوعی...'):
             try:
-                # تحلیل ایموجی توسط جمینای
-                prompt = f"Based on these emojis '{user_emojis}', suggest a music mood or genre. Give me only 2 English keywords for Spotify search. No extra words."
+                # تحلیل ایموجی
+                prompt = f"Analyze these emojis '{user_emojis}' and give me only 2 english keywords for a music search. example: 'chill lo-fi' or 'hard rock'"
                 response = model.generate_content(prompt)
                 search_query = response.text.strip()
                 
-                # جستجو در اسپاتیفای
-                results = sp.search(q=search_query, limit=15, type='track')
+                # سرچ در اسپاتیفای
+                results = sp.search(q=search_query, limit=10, type='track')
                 
                 if results['tracks']['items']:
                     track = random.choice(results['tracks']['items'])
-                    
-                    # نمایش نتیجه با دکور زیبا
-                    st.markdown("---")
                     st.balloons()
                     
-                    col1, col2 = st.columns([1, 2])
-                    with col1:
-                        st.image(track['album']['images'][0]['url'], border_radius=15)
-                    with col2:
+                    st.markdown("---")
+                    c1, c2 = st.columns([1, 2])
+                    with c1:
+                        st.image(track['album']['images'][0]['url'])
+                    with c2:
                         st.subheader(track['name'])
-                        st.write(f"👤 {track['artists'][0]['name']}")
+                        st.write(f"خواننده: {track['artists'][0]['name']}")
                         if track['preview_url']:
                             st.audio(track['preview_url'])
-                        else:
-                            st.info("پیش‌نمایش ندارد، اما از لینک زیر دانلود کن 👇")
                     
-                    # دکمه دانلود شیک
-                    dl_url = f"https://spotifydown.com/?link={track['external_urls']['spotify']}"
-                    st.link_button(f"📥 دانلود آهنگ {track['name']}", dl_url)
-                    
+                    dl_link = f"https://spotifydown.com/?link={track['external_urls']['spotify']}"
+                    st.link_button(f"📥 دانلود آهنگ", dl_link)
                 else:
-                    st.error("آهنگی متناسب با این حس پیدا نشد.")
+                    st.warning("آهنگی پیدا نشد.")
             except Exception as e:
-                st.error(f"یه مشکلی پیش اومد: {e}")
+                # نمایش ارور به زبان ساده‌تر
+                st.error(f"خطا در ارتباط با هوش مصنوعی. لطفا دوباره تلاش کنید.")
+                st.info("نکته: مطمئن شوید ایموجی وارد کرده‌اید.")
     else:
-        st.warning("اول چند تا ایموجی بذار!")
+        st.toast("لطفا اول ایموجی وارد کن!")
 
-st.markdown("<br><br><p style='text-align: center; font-size: 12px; color: #666;'>Powerd by Gemini & Spotify</p>", unsafe_allow_html=True)
+st.markdown("<br><p style='text-align: center; font-size: 10px; opacity: 0.5;'>Made with ❤️ for Musisain</p>", unsafe_allow_html=True)
